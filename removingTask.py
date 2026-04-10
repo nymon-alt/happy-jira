@@ -1,11 +1,19 @@
 #usuwanie wczesniej stworzonego zadania w jira
 
+import os
+from dotenv import load_dotenv
 import requests
 from requests.auth import HTTPBasicAuth
+import json
+
+load_dotenv()
+
+api_key = os.getenv("JIRA_API_KEY")
+email = os.getenv("JIRA_EMAIL")
+
+auth = HTTPBasicAuth(email, api_key)
 
 url = "https://nymon.atlassian.net/rest/api/3/issue/HAP-4" #wpisujesz ID zadania bezposrednio, nie calosc
-
-auth = HTTPBasicAuth("natanek402@gmail.com", "ATATT3xFfGF0VCQLnTOu2qk2k38D6oFWpJD9cLya6QeIV9msPYShSpyzeBgDnyGQKsb3kTdgd52GCTQY9o1dcgPVmQk9Zlne0LsJegeJKMjmV7NXPAyckTzv_zv9KEsWsQV2bF9g3JsJTuE_6feIyTsVI4ZA71HY4twWh3OLjrcjxfUHDZxVhP0=93D16BCD") #cholernie glupie
 
 headers = {
   "Accept": "application/json",

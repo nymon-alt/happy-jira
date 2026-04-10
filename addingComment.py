@@ -1,12 +1,19 @@
 #dodawanie komentarza do wczesniej utworzonego zadania
 
+import os
+from dotenv import load_dotenv
 import requests
 from requests.auth import HTTPBasicAuth
 import json
 
-url = "https://nymon.atlassian.net/rest/api/3/issue/HAP-3/comment" #wpisujesz ID zadania bezposrednio, nie calosc
+load_dotenv()
 
-auth = HTTPBasicAuth("natanek402@gmail.com", "ATATT3xFfGF0VCQLnTOu2qk2k38D6oFWpJD9cLya6QeIV9msPYShSpyzeBgDnyGQKsb3kTdgd52GCTQY9o1dcgPVmQk9Zlne0LsJegeJKMjmV7NXPAyckTzv_zv9KEsWsQV2bF9g3JsJTuE_6feIyTsVI4ZA71HY4twWh3OLjrcjxfUHDZxVhP0=93D16BCD") #cholernie glupie
+api_key = os.getenv("JIRA_API_KEY")
+email = os.getenv("JIRA_EMAIL")
+
+auth = HTTPBasicAuth(email, api_key)
+
+url = "https://nymon.atlassian.net/rest/api/3/issue/HAP-3/comment" #wpisujesz ID zadania bezposrednio, nie calosc
 
 headers = {
   "Accept": "application/json",

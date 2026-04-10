@@ -4,13 +4,20 @@
 # This code sample uses the 'requests' library:
 # http://docs.python-requests.org
 
+import os
+from dotenv import load_dotenv
 import requests
 from requests.auth import HTTPBasicAuth
 import json
 
+load_dotenv()
+
 url = "https://nymon.atlassian.net/rest/api/3/search/jql"
 
-auth = HTTPBasicAuth("natanek402@gmail.com", "ATATT3xFfGF0VCQLnTOu2qk2k38D6oFWpJD9cLya6QeIV9msPYShSpyzeBgDnyGQKsb3kTdgd52GCTQY9o1dcgPVmQk9Zlne0LsJegeJKMjmV7NXPAyckTzv_zv9KEsWsQV2bF9g3JsJTuE_6feIyTsVI4ZA71HY4twWh3OLjrcjxfUHDZxVhP0=93D16BCD") #cholernie glupie
+api_key = os.getenv("JIRA_API_KEY")
+email = os.getenv("JIRA_EMAIL")
+
+auth = HTTPBasicAuth(email, api_key)
 
 headers = {
   "Accept": "application/json",

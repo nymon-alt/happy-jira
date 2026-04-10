@@ -1,0 +1,24 @@
+Zadanie 1: "Szybki podgląd" (GET)
+Cel: Pobierz szczegóły konkretnego zgłoszenia (np. BUG-101) i wyświetl jego status oraz osobę przypisaną.
+
+Zadanie 2: "Automatyczny raport" (SEARCH)
+Cel: Znajdź wszystkie zgłoszenia typu "Bug", które są otwarte (status 'To Do' lub 'In Progress') i wypisz ich klucze. Wykorzystaj do tego język JQL.
+
+Zadanie 3: "Masowa edycja" (PUT/POST)
+Cel: Napisz skrypt, który do konkretnego zadania doda komentarz i jednocześnie zmieni jego priorytet na "Highest" oraz zmieni status na In progres
+
+Zadanie 4: "Przenoszenie zadań (Transition)"
+Cel: Zmień status zadania (np. z "To Do" na "In Progress").
+W Jira nie używasz zwykłego PUT na polu status, ale musisz wykonać tzw. transition.
+
+Zadanie 5: "Masowe sprzątanie backlogu"
+Cel: Znajdź wszystkie zadania typu "Task", które nie były aktualizowane od ponad 30 dni i dodaj do nich etykietę (label) stale_task.
+
+Zadanie 6: "Logowanie czasu (Worklog)"
+Cel: Dodaj wpis o przepracowaniu 2 godzin i 30 minut do konkretnego buga, z opisem wykonanej pracy.
+
+Zadanie 7: "Eksport Bugów do CSV"
+Cel: Pobierz wszystkie bugi z wybranego projektu i zapisz ich klucz, podsumowanie oraz priorytet do pliku .csv.
+
+Zadanie 8: "Generator Sub-tasków" (Hierarchy)
+Cel: Napisz funkcję, która dla podanego klucza zadania (Parent Task) automatycznie utworzy 3 podzadania (np. "Analiza", "Implementacja", "Testy").

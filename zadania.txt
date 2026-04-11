@@ -17,8 +17,5 @@ Cel: Znajdź wszystkie zadania typu "Task", które nie były aktualizowane od po
 Zadanie 6: "Logowanie czasu (Worklog)"
 Cel: Dodaj wpis o przepracowaniu 2 godzin i 30 minut do konkretnego buga, z opisem wykonanej pracy.
 
-Zadanie 7: "Eksport Bugów do CSV"
-Cel: Pobierz wszystkie bugi z wybranego projektu i zapisz ich klucz, podsumowanie oraz priorytet do pliku .csv.
-
-Zadanie 8: "Generator Sub-tasków" (Hierarchy)
+Zadanie 7: "Generator Sub-tasków" (Hierarchy)
 Cel: Napisz funkcję, która dla podanego klucza zadania (Parent Task) automatycznie utworzy 3 podzadania (np. "Analiza", "Implementacja", "Testy").

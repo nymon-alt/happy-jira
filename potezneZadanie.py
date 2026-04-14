@@ -2,7 +2,7 @@
 # Twoim celem jest napisanie skryptu w Pythonie, który wykona głęboką analizę konkretnego projektu (lub wszystkich projektów) i wygeneruje raport w formie nowego zadania (Issue) z listą anomalii, a następnie automatycznie naprawi wybrane z nich.
 
 # Funkcjonalności do zaimplementowania:
-#1 Wykrywanie "Zombiaków": Znajdź zadania, które są w statusie "To Do", ale nie miały żadnej aktualizacji (komentarza, zmiany statusu, logowania czasu) od ponad 1 dnia.
+#1 Wykrywanie "Zombiaków": Znajdź zadania, które są w statusie "To Do", ale nie miały żadnej aktualizacji (komentarza, zmiany statusu, logowania czasu) od ponad -2h.
 
 #2 Kontrola hierarchii (Epic Link Integrity): Wykryj wszystkie zadania typu Story lub Task, które nie są przypisane do żadnego Epica (tzw. "orphans").
 
@@ -29,10 +29,11 @@ headers = {
     "Accept": "application/json",
     "Content-Type": "application/json"
 }
-def searchinJQLforKey(data,result=None):
+def searchinJQLforKey(data):
     result = []
     for item in data['issues']:
         result.append(item['key'])
+    print(result)
     return result
 
 def responseFunction(method="", url=None, data=None, params=None, auth=None, headers=None):
@@ -46,50 +47,46 @@ def responseFunction(method="", url=None, data=None, params=None, auth=None, hea
     )
     return response
 
-def getZombieTask(d = domain, a = auth):
+listOfQueries = {
+    'zombies': {
+        'jql': 'project = HAP AND type IN (Story, Task) AND status = "To Do" AND NOT updated >= -2h ORDER BY cf[10019] ASC'},
+    'estimate': {
+        'jql': 'project = HAP AND type IN (Story, Task, Bug) AND statuscategory = Complete AND (timeestimate = EMPTY OR timespent = EMPTY) ORDER BY cf[10019] ASC'},
+    'orphan': {
+        'jql': 'project = HAP AND type IN (Story, Task) AND parent = empty ORDER BY cf[10019] ASC'},
+}
+
+def getTasksFromJQL(d = domain, a = auth, query = None):
     url = f"{d}search/jql"
-    query = {
-    'jql': 'project = HAP AND type IN (Story, Task) AND status = "To Do" AND NOT updated >= -24h ORDER BY cf[10019] ASC',
-    'fields': 'summary'
-    }
-    response = responseFunction("GET",url,None,query,a,headers)
+    if query == "zombies":
+        nameQuery = query
+        params = {
+        'jql': listOfQueries['zombies']['jql'],
+        'fields': 'summary'
+        }
+    elif query == "estimate":
+        nameQuery = query
+        params = {
+        'jql': listOfQueries['estimate']['jql'],
+        'fields': 'summary'
+        }
+    elif query == "orphan":
+        nameQuery = query
+        params = {
+        'jql': listOfQueries['orphan']['jql'],
+        'fields': 'summary'
+        }
+    else:
+        print("Error! Wrong JQL querry or not existing!")
+    
+    response = responseFunction("GET",url,None,params,a,headers)
     data = response.json()
     if response.status_code == 200:
-        print(f"Success! Data from getZombieTask succeed.")
+        print(f"Success! Data from {nameQuery} succeed.")
         return searchinJQLforKey(data)
     else:
         print(f"Error! Code: {response.status_code}")
         return []  
-
-def getOrphanCheck(d = domain, a = auth):
-    url = f"{d}search/jql"
-    query = {
-    'jql': 'project = HAP AND type IN (Story, Task) AND parent = empty ORDER BY cf[10019] ASC',
-    'fields': 'summary'
-    }
-    response = responseFunction("GET",url,None,query,a,headers)
-    data = response.json()
-    if response.status_code == 200:
-        print(f"Success! Data from getOrphanCheck succeed.")
-        return searchinJQLforKey(data)
-    else:
-        print(f"Error! Code: {response.status_code}") 
-        return []    
-
-def getEstimateCheck(d = domain, a = auth):
-    url = f"{d}search/jql"
-    query = {
-    'jql': 'project = HAP AND type IN (Story, Task, Bug) AND statuscategory = Complete AND (timeestimate = EMPTY OR timespent = EMPTY) ORDER BY cf[10019] ASC',
-    'fields': 'summary'
-    }
-    response = responseFunction("GET",url,None,query,a,headers)
-    data = response.json()
-    if response.status_code == 200:
-        print(f"Success! Data from getEstimateCheck succeed.")
-        return searchinJQLforKey(data)
-    else:
-        print(f"Error! Code: {response.status_code}")  
-        return[]
 
 def postAutoZombieComment(d = domain, a = auth, h = headers, z = None):
     if not z:
@@ -121,47 +118,50 @@ def postAutoZombieComment(d = domain, a = auth, h = headers, z = None):
 
 def createSummaryJira(d = domain, a = auth, h = headers):
     u = f"{d}issue"
-    payload = json.dumps({
-    "fields": {
-        "project": {
-            "key": "HAP"
-        },
-        "summary": "Podsumowanie kazdego zadania (skrot response)",
-        "description": {
-            "type": "doc",
-            "version": 1,
-            "content": [
-                {
-                    "type": "paragraph",
-                    "content": [
-                        {"type": "text", "text": "Lista taskow ktore sa TODO i nie mialy aktualizacji od 1 dnia:"},
-                        {"type": "hardBreak"},
-                        {"type": "text", "text": f"{allZombies}"},
-                        {"type": "hardBreak"},
-                        {"type": "text", "text": "Lista taskow ktore nie maja przypisanego Epica:"},
-                        {"type": "hardBreak"},
-                        {"type": "text", "text": f"{allOrphan}"},
-                        {"type": "hardBreak"},
-                        {"type": "text", "text": "Lista taskow ktore sa zamkniete i nie maja zalogowanego czasu:"},
-                        {"type": "hardBreak"},
-                        {"type": "text", "text": f"{allEstimates}"}
-                    ]
-                }
-            ]
-        },
-        "issuetype": {
-            "name": "Task"
+    try:
+        payload = json.dumps({
+        "fields": {
+            "project": {
+                "key": "HAP"
+            },
+            "summary": "Podsumowanie kazdego zadania (final version?)",
+            "description": {
+                "type": "doc",
+                "version": 1,
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {"type": "text", "text": "Lista taskow ktore sa TODO i nie mialy aktualizacji od 1 dnia:"},
+                            {"type": "hardBreak"},
+                            {"type": "text", "text": f"{allZombies}"},
+                            {"type": "hardBreak"},
+                            {"type": "text", "text": "Lista taskow ktore nie maja przypisanego Epica:"},
+                            {"type": "hardBreak"},
+                            {"type": "text", "text": f"{allOrphan}"},
+                            {"type": "hardBreak"},
+                            {"type": "text", "text": "Lista taskow ktore sa zamkniete i nie maja zalogowanego czasu:"},
+                            {"type": "hardBreak"},
+                            {"type": "text", "text": f"{allEstimates}"}
+                        ]
+                    }
+                ]
+            },
+            "issuetype": {
+                "name": "Task"
+            }
         }
-    }
-    })
-    response = responseFunction("POST",u,payload,None,a,headers)
-    if response.status_code == 201:
-        print(f"Success! Summary task created.")
-    else:
-        print(f"Error! Code: {response.status_code}")
+        })
+        response = responseFunction("POST",u,payload,None,a,headers)
+        if response.status_code == 201:
+            print(f"Success! Summary task created.")
+        else:
+            print(f"Error! Code: {response.status_code}")
+    except NameError:
+        print("Nie wszystkie listy zostaly zainicjalizowane!")
 
-allZombies = getZombieTask()
-allOrphan = getOrphanCheck()
-allEstimates = getEstimateCheck()
+allZombies = getTasksFromJQL(query="zombies") 
+allOrphan = getTasksFromJQL(query="orphan") 
+allEstimates = getTasksFromJQL(query="estimate")
 postAutoZombieComment(z = allZombies)
 createSummaryJira()

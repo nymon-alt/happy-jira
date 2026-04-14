@@ -9,11 +9,9 @@
 #3 Weryfikacja estymacji: Znajdź zadania, bugi, storki zamknięte ("Done"), które nie mają zalogowanego czasu (worklog) lub nie miały uzupełnionego pola Original Estimate.
 
 #4 Dynamiczny Raport HTML: Skrypt powinien zebrać te dane i stworzyć jeden zbiorczy bilet w Jirze (np. w projekcie administracyjnym), w którego opisie znajdzie się sformatowana tabela z wynikami.
+# moja jira to Atlassian z zagniezdzonym JSON'em, nie mam pojecia jak to zrobic, zrobilem same summary
 
 #5 Auto-Komentarz: Skrypt powinien dopisać komentarz do każdego "Zombiaka", oznaczając przypisaną do niego osobę (mention @username): "Cześć, czy to zadanie jest nadal aktualne? Brak aktywności od 30 dni."
-
-# This code sample uses the 'requests' library:
-# http://docs.python-requests.org
 
 import os
 from dotenv import load_dotenv
@@ -28,10 +26,11 @@ email = os.getenv('JIRA_EMAIL')
 api_key = os.getenv('JIRA_API_KEY')
 auth = HTTPBasicAuth(email, api_key)
 headers = {
-  "Accept": "application/json"
+    "Accept": "application/json",
+    "Content-Type": "application/json"
 }
 
-def zombieTask(d = domain, a = auth, h = headers):
+def getZombieTask(d = domain, a = auth, h = headers):
     url = f"{d}search/jql"
     query = {
     'jql': 'project = HAP AND type IN (Story, Task) AND status = "To Do" AND NOT updated >= -24h ORDER BY cf[10019] ASC',
@@ -43,14 +42,19 @@ def zombieTask(d = domain, a = auth, h = headers):
         headers=h,
         params=query,
         auth=a
-    )   
+    )
+    if response.status_code == 200:
+        print(f"Success! Data from getZombieTask succeed.")
+    else:
+        print(f"Error! Code: {response.status_code}")   
     result = []
     data = response.json()
     for item in data['issues']:
-        result.append(item['id'])
+        result.append(item['key'])
     return result
+allZombies = getZombieTask()
 
-def orphanCheck(d = domain, a = auth, h = headers):
+def getOrphanCheck(d = domain, a = auth, h = headers):
     url = f"{d}search/jql"
     query = {
     'jql': 'project = HAP AND type IN (Story, Task) AND parent = empty ORDER BY cf[10019] ASC',
@@ -62,10 +66,19 @@ def orphanCheck(d = domain, a = auth, h = headers):
         headers=h,
         params=query,
         auth=a
-    )   
-    print(json.dumps(json.loads(response.text), sort_keys=True, indent=4, separators=(",", ": ")))
+    )
+    if response.status_code == 200:
+        print(f"Success! Data from getOrphanCheck succeed.")
+    else:
+        print(f"Error! Code: {response.status_code}")     
+    result = []
+    data = response.json()
+    for item in data['issues']:
+        result.append(item['key'])
+    return result
+allOrphan = getOrphanCheck()
 
-def estimateCheck(d = domain, a = auth, h = headers):
+def getEstimateCheck(d = domain, a = auth, h = headers):
     url = f"{d}search/jql"
     query = {
     'jql': 'project = HAP AND type IN (Story, Task, Bug) AND statuscategory = Complete AND (timeestimate = EMPTY OR timespent = EMPTY) ORDER BY cf[10019] ASC',
@@ -77,10 +90,21 @@ def estimateCheck(d = domain, a = auth, h = headers):
         headers=h,
         params=query,
         auth=a
-    )   
-    print(json.dumps(json.loads(response.text), sort_keys=True, indent=4, separators=(",", ": ")))
+    )
+    if response.status_code == 200:
+        print(f"Success! Data from getEstimateCheck succeed.")
+    else:
+        print(f"Error! Code: {response.status_code}")  
+    result = []
+    data = response.json()
+    for item in data['issues']:
+        result.append(item['key'])
+    return result
+allEstimates = getEstimateCheck()
 
-def autoComment(d = domain, a = auth, h = headers, z = allZombies):
+def postAutoZombieComment(d = domain, a = auth, h = headers, z = allZombies):
+    if not z:
+        print("Error! Lista taskow zombie jest pusta!")
     for item in z:
         url = f"{d}issue/{item}/comment"
         payload = json.dumps({
@@ -93,20 +117,76 @@ def autoComment(d = domain, a = auth, h = headers, z = allZombies):
                         "content": [
                             {
                                 "type": "text",
-                                "text": "zombiaczek, ping"
+                                "text": "zombiaczek, ping2"
                             }
                         ]
                     }
                 ]
             }
         })
+        response = requests.request(
+        "POST",
+        url,
+        data=payload,
+        headers=h,
+        auth=a
+        )
+        if response.status_code == 201:
+            print(f"Success! Task that are zombies: {z} are commented!")
+        else:
+            print(f"Error! Code: {response.status_code}")
+
+def createSummaryJira(d = domain, a = auth, h = headers):
+    u = f"{d}issue"
+    payload = json.dumps({
+    "fields": {
+        "project": {
+            "key": "HAP"
+        },
+        "summary": "Podsumowanie kazdego zadania:",
+        "description": {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "Lista taskow ktore sa TODO i nie mialy aktualizacji od 1 dnia:"},
+                        {"type": "hardBreak"},
+                        {"type": "text", "text": f"{allZombies}"},
+                        {"type": "hardBreak"},
+                        {"type": "text", "text": "Lista taskow ktore nie maja przypisanego Epica:"},
+                        {"type": "hardBreak"},
+                        {"type": "text", "text": f"{allOrphan}"},
+                        {"type": "hardBreak"},
+                        {"type": "text", "text": "Lista taskow ktore sa zamkniete i nie maja zalogowanego czasu:"},
+                        {"type": "hardBreak"},
+                        {"type": "text", "text": f"{allEstimates}"}
+                    ]
+                }
+            ]
+        },
+        "issuetype": {
+            "name": "Task"
+        }
+    }
+    })
 
     response = requests.request(
-       "POST",
-       url,
-       data=payload,
-       headers=headers,
-       auth=auth
+    "POST",
+    url = u,
+    data=payload,
+    headers=h,
+    auth=a
     )
-    print(json.dumps(json.loads(response.text), sort_keys=True, indent=4, separators=(",", ": ")))
 
+    if response.status_code == 201:
+        print(f"Success! Summary task created.")
+    else:
+        print(f"Error! Code: {response.status_code}")
+
+getZombieTask()
+getOrphanCheck()
+getEstimateCheck()
+postAutoZombieComment()
+createSummaryJira()

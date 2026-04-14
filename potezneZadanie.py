@@ -29,80 +29,69 @@ headers = {
     "Accept": "application/json",
     "Content-Type": "application/json"
 }
+def searchinJQLforKey(data,result=None):
+    result = []
+    for item in data['issues']:
+        result.append(item['key'])
+    return result
 
-def getZombieTask(d = domain, a = auth, h = headers):
+def responseFunction(method="", url=None, data=None, params=None, auth=None, headers=None):
+    response = requests.request(
+        method = method,
+        url = url,
+        data = data,
+        params = params,
+        auth = auth,
+        headers = headers
+    )
+    return response
+
+def getZombieTask(d = domain, a = auth):
     url = f"{d}search/jql"
     query = {
     'jql': 'project = HAP AND type IN (Story, Task) AND status = "To Do" AND NOT updated >= -24h ORDER BY cf[10019] ASC',
     'fields': 'summary'
     }
-    response = requests.request(
-        "GET",
-        url,
-        headers=h,
-        params=query,
-        auth=a
-    )
+    response = responseFunction("GET",url,None,query,a,headers)
+    data = response.json()
     if response.status_code == 200:
         print(f"Success! Data from getZombieTask succeed.")
+        return searchinJQLforKey(data)
     else:
-        print(f"Error! Code: {response.status_code}")   
-    result = []
-    data = response.json()
-    for item in data['issues']:
-        result.append(item['key'])
-    return result
-allZombies = getZombieTask()
+        print(f"Error! Code: {response.status_code}")
+        return []  
 
-def getOrphanCheck(d = domain, a = auth, h = headers):
+def getOrphanCheck(d = domain, a = auth):
     url = f"{d}search/jql"
     query = {
     'jql': 'project = HAP AND type IN (Story, Task) AND parent = empty ORDER BY cf[10019] ASC',
     'fields': 'summary'
     }
-    response = requests.request(
-        "GET",
-        url,
-        headers=h,
-        params=query,
-        auth=a
-    )
+    response = responseFunction("GET",url,None,query,a,headers)
+    data = response.json()
     if response.status_code == 200:
         print(f"Success! Data from getOrphanCheck succeed.")
+        return searchinJQLforKey(data)
     else:
-        print(f"Error! Code: {response.status_code}")     
-    result = []
-    data = response.json()
-    for item in data['issues']:
-        result.append(item['key'])
-    return result
-allOrphan = getOrphanCheck()
+        print(f"Error! Code: {response.status_code}") 
+        return []    
 
-def getEstimateCheck(d = domain, a = auth, h = headers):
+def getEstimateCheck(d = domain, a = auth):
     url = f"{d}search/jql"
     query = {
     'jql': 'project = HAP AND type IN (Story, Task, Bug) AND statuscategory = Complete AND (timeestimate = EMPTY OR timespent = EMPTY) ORDER BY cf[10019] ASC',
     'fields': 'summary'
     }
-    response = requests.request(
-        "GET",
-        url,
-        headers=h,
-        params=query,
-        auth=a
-    )
+    response = responseFunction("GET",url,None,query,a,headers)
+    data = response.json()
     if response.status_code == 200:
         print(f"Success! Data from getEstimateCheck succeed.")
+        return searchinJQLforKey(data)
     else:
         print(f"Error! Code: {response.status_code}")  
-    result = []
-    data = response.json()
-    for item in data['issues']:
-        result.append(item['key'])
-    return result
-allEstimates = getEstimateCheck()
+        return[]
 
-def postAutoZombieComment(d = domain, a = auth, h = headers, z = allZombies):
+def postAutoZombieComment(d = domain, a = auth, h = headers, z = None):
     if not z:
         print("Error! Lista taskow zombie jest pusta!")
     for item in z:
@@ -117,20 +106,14 @@ def postAutoZombieComment(d = domain, a = auth, h = headers, z = allZombies):
                         "content": [
                             {
                                 "type": "text",
-                                "text": "zombiaczek, ping2"
+                                "text": "zombiaczek, ping3"
                             }
                         ]
                     }
                 ]
             }
         })
-        response = requests.request(
-        "POST",
-        url,
-        data=payload,
-        headers=h,
-        auth=a
-        )
+        response = responseFunction("POST",url,payload,None,a,headers)
         if response.status_code == 201:
             print(f"Success! Task that are zombies: {z} are commented!")
         else:
@@ -143,7 +126,7 @@ def createSummaryJira(d = domain, a = auth, h = headers):
         "project": {
             "key": "HAP"
         },
-        "summary": "Podsumowanie kazdego zadania:",
+        "summary": "Podsumowanie kazdego zadania (skrot response)",
         "description": {
             "type": "doc",
             "version": 1,
@@ -171,22 +154,14 @@ def createSummaryJira(d = domain, a = auth, h = headers):
         }
     }
     })
-
-    response = requests.request(
-    "POST",
-    url = u,
-    data=payload,
-    headers=h,
-    auth=a
-    )
-
+    response = responseFunction("POST",u,payload,None,a,headers)
     if response.status_code == 201:
         print(f"Success! Summary task created.")
     else:
         print(f"Error! Code: {response.status_code}")
 
-getZombieTask()
-getOrphanCheck()
-getEstimateCheck()
-postAutoZombieComment()
+allZombies = getZombieTask()
+allOrphan = getOrphanCheck()
+allEstimates = getEstimateCheck()
+postAutoZombieComment(z = allZombies)
 createSummaryJira()

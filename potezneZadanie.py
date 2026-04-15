@@ -8,10 +8,11 @@
 
 #3 Weryfikacja estymacji: Znajdź zadania, bugi, storki zamknięte ("Done"), które nie mają zalogowanego czasu (worklog) lub nie miały uzupełnionego pola Original Estimate.
 
-#4 Dynamiczny Raport HTML: Skrypt powinien zebrać te dane i stworzyć jeden zbiorczy bilet w Jirze (np. w projekcie administracyjnym), w którego opisie znajdzie się sformatowana tabela z wynikami.
-# moja jira to Atlassian z zagniezdzonym JSON'em, nie mam pojecia jak to zrobic, zrobilem same summary
+#4 Dynamiczny Raport HTML: Skrypt powinien zebrać te dane i stworzyć jeden zbiorczy bilet w Jirze (np. w projekcie administracyjnym), w którego opisie znajda sie wyniki
 
 #5 Auto-Komentarz: Skrypt powinien dopisać komentarz do każdego "Zombiaka", oznaczając przypisaną do niego osobę (mention @username): "Cześć, czy to zadanie jest nadal aktualne? Brak aktywności od 30 dni."
+
+#6 Uporzadkuj ladnie kod
 
 import os
 from dotenv import load_dotenv
@@ -29,13 +30,16 @@ headers = {
     "Accept": "application/json",
     "Content-Type": "application/json"
 }
-def searchinJQLforKey(data):
-    result = []
-    for item in data['issues']:
-        result.append(item['key'])
-    print(result)
-    return result
-
+#zapytania JQL uzywane przez GET
+listOfQueries = { 
+    'zombies': {
+        'jql': 'project = HAP AND type IN (Story, Task) AND status = "To Do" AND NOT updated >= -2h ORDER BY cf[10019] ASC'},
+    'estimate': {
+        'jql': 'project = HAP AND type IN (Story, Task, Bug) AND statuscategory = Complete AND (timeestimate = EMPTY OR timespent = EMPTY) ORDER BY cf[10019] ASC'},
+    'orphan': {
+        'jql': 'project = HAP AND type IN (Story, Task) AND parent = empty ORDER BY cf[10019] ASC'},
+}
+#funkcja sluzaca wysylaniu metod (GET, POST etc.) do API (uniwersalna)
 def responseFunction(method="", url=None, data=None, params=None, auth=None, headers=None):
     response = requests.request(
         method = method,
@@ -47,15 +51,15 @@ def responseFunction(method="", url=None, data=None, params=None, auth=None, hea
     )
     return response
 
-listOfQueries = {
-    'zombies': {
-        'jql': 'project = HAP AND type IN (Story, Task) AND status = "To Do" AND NOT updated >= -2h ORDER BY cf[10019] ASC'},
-    'estimate': {
-        'jql': 'project = HAP AND type IN (Story, Task, Bug) AND statuscategory = Complete AND (timeestimate = EMPTY OR timespent = EMPTY) ORDER BY cf[10019] ASC'},
-    'orphan': {
-        'jql': 'project = HAP AND type IN (Story, Task) AND parent = empty ORDER BY cf[10019] ASC'},
-}
+#funkcja szukajaca key-ID w tym co wyrzuci API
+def searchinJQLforKey(data):
+    result = []
+    for item in data['issues']:
+        result.append(item['key'])
+    print(result)
+    return result
 
+#funkcja szukajaca po projekcie zapytan JQL i zwracajaca wynik
 def getTasksFromJQL(d = domain, a = auth, query = None):
     url = f"{d}search/jql"
     if query == "zombies":
@@ -86,8 +90,9 @@ def getTasksFromJQL(d = domain, a = auth, query = None):
         return searchinJQLforKey(data)
     else:
         print(f"Error! Code: {response.status_code}")
-        return []  
+        return [] 
 
+#komentowanie taskow zombie
 def postAutoZombieComment(d = domain, a = auth, h = headers, z = None):
     if not z:
         print("Error! Lista taskow zombie jest pusta!")
@@ -116,6 +121,7 @@ def postAutoZombieComment(d = domain, a = auth, h = headers, z = None):
         else:
             print(f"Error! Code: {response.status_code}")
 
+#tworzenie jiry z podsumowaniem
 def createSummaryJira(d = domain, a = auth, h = headers):
     u = f"{d}issue"
     try:

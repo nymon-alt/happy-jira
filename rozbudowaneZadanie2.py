@@ -5,7 +5,7 @@
 
 # Mają status "To Do" i priorytet "Highest", ale leżą nietknięte od 14 dni.
 
-# Są przypisane do osób, które mają obecnie więcej niż 5 otwartych zadań (wykrywanie "wąskiego gardła").
+# Są przypisane do osób, które mają obecnie więcej niż 2 otwartych zadań (wykrywanie "wąskiego gardła").
 
 # 2. Dla znalezionych zgłoszeń skrypt musi podjąć akcje:
 
@@ -32,3 +32,50 @@
 # Programowanie obiektowe (OOP): Stwórz klasę JiraManager, która będzie miała metody takie jak .get_stale_issues(), .post_comment(), czy .generate_report().
 
 # Obsługa błędów: Dodaj bloki try-except, aby skrypt nie wywalił się przy błędzie sieciowym lub braku uprawnień do konkretnego zgłoszenia.
+
+# ///////////////////////////////////////////////////////////////////////////////////////////// #
+
+# This code sample uses the 'requests' library:
+# http://docs.python-requests.org
+import requests
+from requests.auth import HTTPBasicAuth
+import json
+import os
+import dotenv
+
+dotenv.load_dotenv()
+
+url = "https://nymon.atlassian.net/rest/api/3/search/jql"
+
+key = os.getenv('JIRA_API_KEY')
+email = os.getenv('JIRA_EMAIL')
+
+auth = HTTPBasicAuth(email, key)
+
+headers = {
+  "Accept": "application/json"
+}
+
+allResults = []
+
+queries = [
+    'project = HAP AND status=10004 AND updated<=-5d',
+    'project = HAP AND status=10003 AND updated<=-1d AND priority=High',
+    'project = HAP AND assignee=712020:0054c47f-96b1-4a85-8d59-f928c4235d41 AND status!=Zrobione'
+]
+
+for item in queries:
+    query = {
+        'jql':item,
+        'maxResults': 50,
+        'fields': 'id',
+    }
+    response = requests.request(
+        "GET",
+        url,
+        headers=headers,
+        params=query,
+        auth=auth
+    )
+    data = response.json()
+    print(data['issues'])

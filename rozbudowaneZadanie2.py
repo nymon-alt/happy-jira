@@ -42,6 +42,7 @@ from requests.auth import HTTPBasicAuth
 import json
 import os
 import dotenv
+import tenacity
 
 dotenv.load_dotenv()
 
@@ -53,10 +54,9 @@ email = os.getenv('JIRA_EMAIL')
 auth = HTTPBasicAuth(email, key)
 
 headers = {
-  "Accept": "application/json"
+  "Accept": "application/json",
+  "Content-Type": "application/json"
 }
-
-allResults = []
 
 queries = [
     'project = HAP AND status=10004 AND updated<=-5d',
@@ -64,12 +64,15 @@ queries = [
     'project = HAP AND assignee=712020:0054c47f-96b1-4a85-8d59-f928c4235d41 AND status!=Zrobione'
 ]
 
+all_keys = []
+
 for item in queries:
     query = {
-        'jql':item,
-        'maxResults': 50,
-        'fields': 'id',
+        'jql': item,
+        'maxResults': '50',
+        'fields': 'key',
     }
+
     response = requests.request(
         "GET",
         url,
@@ -77,5 +80,14 @@ for item in queries:
         params=query,
         auth=auth
     )
+
     data = response.json()
-    print(data['issues'])
+    issues = data.get('issues')
+
+    all_keys_one_query = []
+    for item in issues:
+        all_keys_one_query.append(item['key'])
+    
+    all_keys.append(all_keys_one_query)
+
+print(all_keys)

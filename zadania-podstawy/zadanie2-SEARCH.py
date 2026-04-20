@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import requests
 from requests.auth import HTTPBasicAuth
 import json
+import pprint
 
 load_dotenv()
 
@@ -38,4 +39,6 @@ response = requests.request(
    auth=auth
 )
 
-print(json.dumps(json.loads(response.text), sort_keys=True, indent=4, separators=(",", ": ")))
+data = response.json()
+#pprint.pprint(data)
+print(json.dumps(data, indent=4))

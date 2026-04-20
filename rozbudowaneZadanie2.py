@@ -57,37 +57,49 @@ headers = {
   "Accept": "application/json",
   "Content-Type": "application/json"
 }
-
+# Mają status "In Progress", ale nie były aktualizowane od ponad 5 dni.
+# Mają status "To Do" i priorytet "Highest", ale leżą nietknięte od 14 dni.
+# Są przypisane do osób, które mają obecnie więcej niż 2 otwartych zadań (wykrywanie "wąskiego gardła").
 queries = [
     'project = HAP AND status=10004 AND updated<=-5d',
     'project = HAP AND status=10003 AND updated<=-1d AND priority=High',
     'project = HAP AND assignee=712020:0054c47f-96b1-4a85-8d59-f928c4235d41 AND status!=Zrobione'
 ]
 
-all_keys = []
+#funkcja bioraca zapytanie z listy queries i zwracajaca liste key-id, example: [[HAP-1,HAP-2...],[HAP-6,HAP-7...],[HAP-10,HAP-11]]
+def getIssueKeys(u = url, h = headers, a = auth):
+    all_keys = []
+    for item in queries:
+        query = {
+            'jql': item,
+            'maxResults': '50',
+            'fields': 'key',
+        }
 
-for item in queries:
-    query = {
-        'jql': item,
-        'maxResults': '50',
-        'fields': 'key',
-    }
+        response = requests.request(
+            "GET",
+            url=u,
+            headers=h,
+            params=query,
+            auth=a
+        )
 
-    response = requests.request(
-        "GET",
-        url,
-        headers=headers,
-        params=query,
-        auth=auth
-    )
+        data = response.json()
+        issues = data.get('issues')
 
-    data = response.json()
-    issues = data.get('issues')
+        all_keys_one_query = []
+        for item in issues:
+            all_keys_one_query.append(item['key'])
+        
+        all_keys.append(all_keys_one_query)
 
-    all_keys_one_query = []
-    for item in issues:
-        all_keys_one_query.append(item['key'])
-    
-    all_keys.append(all_keys_one_query)
+    return all_keys
 
-print(all_keys)
+def addingCommentWithMention():
+    pass
+
+def staleAlertLabel():
+    pass
+
+def changingStatus():
+    pass

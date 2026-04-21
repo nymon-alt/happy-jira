@@ -20,7 +20,7 @@ headers = {
 }
 
 @tenacity.retry(wait=tenacity.wait_exponential(multiplier=1, min=4, max=10))
-def simpleQuery(u = url, a = auth, h = headers):
+def simpleQuery():
     query = {
         'jql': 'issuetype = Bug',
         'maxResults': '50',
